@@ -29,11 +29,22 @@ index.html              page shell
 assets/styles.css       styles
 assets/app.js           all app logic (no dependencies)
 favicon.svg             icon
-manifest.webmanifest    lets phones "Add to Home Screen"
-vercel.json             clean URLs and security headers
+icons/                  PNG app icons (192, 512, maskable 512, Apple 180)
+manifest.webmanifest    app name, icons and colours for installing
+sw.js                   service worker: makes it installable and work offline
+vercel.json             clean URLs, security headers, service-worker headers
 ```
 
 No build step and no npm packages. Fonts load from Google Fonts.
+
+## Install as an app (PWA)
+
+Once deployed (Vercel serves it over HTTPS, which installing needs):
+
+- **Chrome / Edge on desktop or Android:** an **Install app** button appears in the top bar, or use the install icon in the address bar.
+- **iPhone / iPad (Safari):** tap **Install app** for instructions, or tap Share → **Add to Home Screen**.
+
+The installed app opens in its own window and works offline. When you deploy a change, it picks up the new version the next time it opens online. If you change file names or want to clear old caches, bump `VERSION` in `sw.js` (and the `?v=` numbers in `index.html` and `sw.js`).
 
 ## Run locally
 

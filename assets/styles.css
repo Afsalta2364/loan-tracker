@@ -263,3 +263,7 @@ details.more[open] summary{margin-bottom:8px}
 .ex-wrap{position:relative;display:grid}
 .ex-remove{position:absolute;right:20px;bottom:16px;background:var(--surface)}
 .ex-wrap .loan-card{padding-bottom:60px}
+.install{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:13px;padding:8px 14px}
+.install:hover{background:color-mix(in srgb, var(--accent) 85%, #000)}
+.install[hidden]{display:none}
+@media (display-mode: standalone){ .top{padding-top:env(safe-area-inset-top)} }

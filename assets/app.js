@@ -205,7 +205,7 @@ save();
 var toastTimer;
 function toast(msg){ var t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 2200); }
 function copyText(text, label){
-  var fallback = function(){ var box = document.getElementById("copybox"), ta = document.getElementById("copybox-text"); ta.value = text; box.hidden = false; ta.focus(); ta.select(); };
+  var fallback = function(){ var box = document.getElementById("copybox"), ta = document.getElementById("copybox-text"); ta.hidden = false; document.getElementById("copybox-title").textContent = "Copy this text"; document.getElementById("copybox-hint").textContent = "Your browser blocked automatic copying. Select all of the text below and copy it."; ta.value = text; box.hidden = false; ta.focus(); ta.select(); };
   try { navigator.clipboard.writeText(text).then(function(){ toast(label + " copied"); }, fallback); } catch(e){ fallback(); }
 }
 document.getElementById("copybox-close").addEventListener("click", function(){ document.getElementById("copybox").hidden = true; });
@@ -760,6 +760,40 @@ curSel.addEventListener("change", function(){
   setCurrency(curSel.value); data.currency = CUR; save();
   var y = window.scrollY; route(); window.scrollTo(0, y); toast("Showing amounts in " + CUR);
 });
+/* ---------- install as an app (PWA) ---------- */
+var installBtn = document.getElementById("install-btn"), deferredPrompt = null;
+var isStandalone = function(){ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; };
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault(); deferredPrompt = e;
+  if (!isStandalone()) installBtn.hidden = false;
+});
+installBtn.addEventListener("click", function(){
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(){ deferredPrompt = null; installBtn.hidden = true; });
+});
+window.addEventListener("appinstalled", function(){ installBtn.hidden = true; deferredPrompt = null; toast("App installed"); });
+/* iPhone/iPad Safari has no install prompt: show a one-time hint instead */
+(function(){
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  var seen = false; try { seen = localStorage.getItem("loanTracker.iosHint") === "1"; } catch(e){}
+  if (ios && !isStandalone() && !seen){
+    installBtn.hidden = false; installBtn.textContent = "Install app";
+    installBtn.addEventListener("click", function(){
+      if (deferredPrompt) return;
+      var box = document.getElementById("copybox");
+      document.getElementById("copybox-title").textContent = "Add to Home Screen";
+      document.getElementById("copybox-hint").textContent = "In Safari, tap the Share button, then choose \u201cAdd to Home Screen\u201d.";
+      document.getElementById("copybox-text").hidden = true;
+      box.hidden = false;
+      try { localStorage.setItem("loanTracker.iosHint", "1"); } catch(e){}
+    });
+  }
+})();
+if ("serviceWorker" in navigator && location.protocol !== "file:"){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("/sw.js").catch(function(){}); });
+}
+
 showBanner();
 route();
 })();

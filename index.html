@@ -7,8 +7,15 @@
 <meta name="description" content="Track loans with daily interest: record payments, see outstanding balance, ledger and early-closure plans.">
 <meta name="theme-color" content="#f3f1eb">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Loans">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="application-name" content="Loans">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="assets/styles.css?v=3">
+<link rel="stylesheet" href="assets/styles.css?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Orbitron:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -23,6 +30,7 @@
       <div><div class="bname">Loan Repayment Tracker</div><div class="bsub">Daily interest, payments and early-closure plans</div></div>
     </div>
     <div class="topright">
+    <button id="install-btn" class="install" hidden>Install app</button>
     <label class="cur" for="cur-select"><span class="sr">Base currency</span><select id="cur-select" aria-label="Base currency"></select></label>
     <nav class="tabs" aria-label="Views">
       <a href="#dashboard" data-tab="dashboard">My loans</a>
@@ -45,6 +53,6 @@
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=4"></script>
 </body>
 </html>
