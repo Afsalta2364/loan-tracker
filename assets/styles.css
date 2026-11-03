@@ -256,3 +256,10 @@ details.more[open] summary{margin-bottom:8px}
 }
 @media (max-width:440px){ .tiles{grid-template-columns:1fr} .wrap{padding:0 16px} main{padding:24px 16px 56px} }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} .loan-card:hover{transform:none} }
+
+.example-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--warn-soft);border-radius:var(--radius);padding:12px 12px 12px 18px}
+.example-bar p{font-size:14px}
+.example-bar strong{font-weight:600}
+.ex-wrap{position:relative;display:grid}
+.ex-remove{position:absolute;right:20px;bottom:16px;background:var(--surface)}
+.ex-wrap .loan-card{padding-bottom:60px}

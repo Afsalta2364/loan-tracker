@@ -198,7 +198,8 @@ function exampleLoan(){
 var data = load();
 if (data && data.currency) setCurrency(data.currency);
 if (!data || !Array.isArray(data.loans)) { data = {v:3, loans:[exampleLoan()]}; save(); }
-data.loans.forEach(function(l){ if (l.example && !l.tenure) l.tenure = 60; });
+data.loans.forEach(function(l){ if (!l.example && l.lender === "Example Bank" && l.name === "Car loan") l.example = true; if (l.example && !l.tenure) l.tenure = 60; });
+save();
 
 /* ---------- UI helpers ---------- */
 var toastTimer;
@@ -318,7 +319,7 @@ function renderDash(){
   '</div>';
   var cards = all.length ? '<div class="loan-grid">' + all.map(function(x){
     var l = x.l, s = x.s, st = loanStatus(l, s);
-    return '<a class="loan-card ' + st.card + '" href="#loan-' + l.id + '">' +
+    return (l.example ? '<div class="ex-wrap">' : '') + '<a class="loan-card ' + st.card + '" href="#loan-' + l.id + '">' +
       '<div class="lc-top"><div><div class="lc-name">' + esc(l.name) + ' ' + (l.example ? '<span class="tag">Example</span>' : '') + '</div>' +
       '</div>' +
       '<span class="pill ' + st.cls + '">' + st.lbl + '</span></div>' +
@@ -332,12 +333,15 @@ function renderDash(){
       '<div><span>Last paid</span><span>' + (s.lastPay ? fmtDate(s.lastPay.date) : '–') + '</span></div></div>' +
       (function(){ var e = endPayoffNoPay(l, s); return e ? '<div class="endline"><span>Payoff at end of tenure<small>if nothing more is paid</small></span><span>' + money(e.amount) + '</span></div>' : ''; })() +
       '<div><div class="bar" role="img" aria-label="' + Math.round(s.pct) + '% of principal repaid"><i style="width:' + s.pct.toFixed(1) + '%"></i></div>' +
-      '<div class="barlbl"><span>' + Math.round(s.pct) + '% repaid</span></div></div></a>';
+      '<div class="barlbl"><span>' + Math.round(s.pct) + '% repaid</span></div></div></a>' +
+      (l.example ? '<button class="sm ex-remove" data-act="remove-example">Remove example</button></div>' : '');
   }).join("") + '</div>'
   : '<div class="card empty"><h2>No loans yet</h2><p class="muted">Add a loan from the calculator with its amount, rate and start date.</p><a href="#calculator"><button class="primary">Open the calculator</button></a></div>';
   app.innerHTML = '<div class="stack">' +
     '<div class="pagehead"><div><h1>My loans</h1><p class="sub">All your loans at a glance.</p></div>' +
-    '<div class="btns"><a href="#calculator"><button class="primary">Add a loan</button></a></div></div>' + tiles + cards +
+    '<div class="btns"><a href="#calculator"><button class="primary">Add a loan</button></a></div></div>' +
+    (data.loans.some(function(l){ return l.example; }) ? '<div class="example-bar"><p><strong>You\'re looking at example data.</strong> Remove it and add your own loans.</p><button class="primary sm" data-act="remove-example">Remove example data</button></div>' : '') +
+    tiles + cards +
     '</div>';
 }
 
@@ -583,7 +587,7 @@ function renderLoan(l){
     '<div><a class="back" href="#dashboard">← My loans</a><div class="loan-head"><div>' +
       '<h1>' + esc(l.name) + ' ' + (l.example ? '<span class="tag">Example</span>' : '') + ' <span class="pill ' + st.cls + '" style="vertical-align:middle">' + st.lbl + '</span></h1>' +
       '<div class="meta num">' + facts + '</div></div>' +
-      (ui.editing ? '' : '<div class="btns"><button data-act="edit">Edit details</button></div>') + '</div></div>' +
+      (ui.editing ? '' : '<div class="btns">' + (l.example ? '<button class="danger" data-act="remove-example">Remove example</button>' : '') + '<button data-act="edit">Edit details</button></div>') + '</div></div>' +
     (ui.editing ? editCard(l) : '') +
     '<div class="tiles">' +
       '<div class="tile accent"><span class="k">Outstanding</span><div class="v">' + moneyHTML(L.P) + '</div><span class="d">' + Math.round(s.pct) + '% repaid</span></div>' +
@@ -714,6 +718,10 @@ app.addEventListener("click", function(e){
     s.L.rows.forEach(function(x){ lines.push([x.date, "Payment", x.days, x.accrued.toFixed(2), x.amount.toFixed(2), x.toInt.toFixed(2), x.toPrin.toFixed(2), x.bal.toFixed(2), x.unpaid.toFixed(2), '"' + String(x.note).replace(/"/g, '""') + '"'].join(",")); });
     if (!s.closed) lines.push([TODAY, "Interest so far (not paid)", s.L.sinceDays, "", "", "", "", s.L.P.toFixed(2), s.L.acc.toFixed(2), ""].join(","));
     copyText(lines.join("\n"), "Statement");
+  }
+  else if (act === "remove-example"){
+    data.loans = data.loans.filter(function(x){ return !x.example; });
+    save(); if (location.hash && location.hash !== "#dashboard") location.hash = "dashboard"; else renderDash(); toast("Example data removed");
   }
   else if (act === "copy-ledger"){ if (ledgerCSV) copyText(ledgerCSV(), "Ledger"); }
   else if (act === "copy-calc-csv"){
