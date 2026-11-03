@@ -1,0 +1,12 @@
+{
+  "name": "Loan Repayment Tracker",
+  "short_name": "Loans",
+  "description": "Track loans with daily interest, payments, a ledger and early-closure plans.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f1eb",
+  "theme_color": "#f3f1eb",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
