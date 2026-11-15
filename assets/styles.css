@@ -263,6 +263,28 @@ details.more[open] summary{margin-bottom:8px}
 .ex-wrap{position:relative;display:grid}
 .ex-remove{position:absolute;right:20px;bottom:16px;background:var(--surface)}
 .ex-wrap .loan-card{padding-bottom:60px}
+/* gold */
+:root{--gold:#b8860b;--gold-soft:#f6ecd0}
+.gold-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.gp{background:var(--sunk);border-radius:12px;padding:14px;display:grid;gap:10px}
+.gp-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.gp-name{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.03em}
+.gp-g{font-family:var(--font-num);font-size:22px;line-height:1.1;text-align:right;white-space:nowrap}
+.gp-g small{display:block;font-size:11.5px;color:var(--muted);margin-top:4px}
+.bar.gold{background:var(--surface)}
+.bar.gold > i{background:var(--gold)}
+.tabs a{white-space:nowrap}
+@media (max-width:620px){
+  /* small screens: name + currency on the first row, the four tabs on their own full-width row */
+  .topin{gap:10px;padding:10px 0}
+  .topright{display:contents}
+  .brand{flex:1;min-width:0}
+  .bname{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabs{flex:1 1 100%;order:3;justify-content:space-between}
+  .tabs a{flex:1;text-align:center;padding:7px 6px;font-size:13px}
+  .cur select{font-size:12.5px;padding:7px 24px 7px 10px;background-position:right 9px center}
+}
+tfoot td{background:var(--gold-soft);border-top:1px solid var(--line);border-bottom:0}
 .install{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:13px;padding:8px 14px}
 .install:hover{background:color-mix(in srgb, var(--accent) 85%, #000)}
 .install[hidden]{display:none}

@@ -3,14 +3,14 @@
    Strategy: network first for the app's own files (so a new deploy shows up straight away),
    falling back to the cache when offline; cache first for Google Fonts.
    Bump VERSION when you want to clear old caches. */
-const VERSION = "v4";
+const VERSION = "v5";
 const APP_CACHE = "loan-app-" + VERSION;
 const FONT_CACHE = "loan-fonts-" + VERSION;
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/assets/styles.css?v=4",
-  "/assets/app.js?v=4",
+  "/assets/styles.css?v=5",
+  "/assets/app.js?v=5",
   "/manifest.webmanifest",
   "/favicon.svg",
   "/icons/icon-192.png",

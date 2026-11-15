@@ -8,6 +8,7 @@ A web app for tracking loans with daily interest. Record payments on any date; e
 - **Loan page** – record payments, balance chart, payment history, end-of-tenure figures, close-early planner, edit details.
 - **Ledger** – date-wise opening + interest − repayment = outstanding, per loan or combined across all loans. Copy as CSV.
 - **Calculator** – EMI, total interest and schedule for a new loan, then save it to track.
+- **Gold** – a schedule of gold items (name, grams, purity, who has it now, since when, note). Moving an item to another person keeps a record of earlier holders. Filter by person, copy as CSV. At the bottom, **insights** show the grams (and 24K-equivalent) with each person and their share of the total.
 - **Base currency** – picker in the top bar (display only, no conversion).
 
 ## How interest works

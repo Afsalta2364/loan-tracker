@@ -197,7 +197,8 @@ function exampleLoan(){
 }
 var data = load();
 if (data && data.currency) setCurrency(data.currency);
-if (!data || !Array.isArray(data.loans)) { data = {v:3, loans:[exampleLoan()]}; save(); }
+if (!data || !Array.isArray(data.loans)) { data = {v:3, loans:[exampleLoan()], gold:[]}; save(); }
+if (!Array.isArray(data.gold)) data.gold = [];
 data.loans.forEach(function(l){ if (!l.example && l.lender === "Example Bank" && l.name === "Car loan") l.example = true; if (l.example && !l.tenure) l.tenure = 60; });
 save();
 
@@ -295,6 +296,7 @@ var loanCtx = null;
 function route(){
   var h = location.hash.slice(1); loanCtx = null;
   if (h === "calculator"){ setTab("calculator"); renderCalc(); }
+  else if (h === "gold"){ setTab("gold"); renderGold(); }
   else if (h === "ledger"){ setTab("ledger"); renderLedger(); }
   else if (h.indexOf("loan-") === 0){
     var l = data.loans.find(function(x){ return x.id === h.slice(5); });
@@ -663,6 +665,145 @@ function balanceChart(l, s){
     (proj.length > 1 ? '<div class="legend"><span><i></i>Actual</span><span><i class="dash"></i>Your plan</span></div>' : '');
 }
 
+/* ---------- Gold ----------
+   Each item: {id, item, grams, karat, holder, since, note, history:[{holder, from, to}]}.
+   "holder" is who has / is using the gold now. Insights add up grams per person. */
+var KARATS = ["24K","22K","21K","18K","14K","Other"];
+var GF = new Intl.NumberFormat("en-US", {minimumFractionDigits:0, maximumFractionDigits:3});
+function grams(x){ return GF.format(x) + " g"; }
+function pure(g){ var k = parseInt(g.karat, 10); return k > 0 ? g.grams * k / 24 : g.grams; }   /* 24K-equivalent */
+function blankGold(){ return {editing:null, item:"", grams:"", karat:"22K", holder:"", since:TODAY, note:"", delAsk:null, filter:"all"}; }
+var goldUI = blankGold();
+function personKey(n){ return String(n || "").trim().toLowerCase(); }
+function goldByPerson(){
+  var map = {}, list = [];
+  data.gold.forEach(function(g){
+    var k = personKey(g.holder);
+    if (!map[k]){ map[k] = {name:g.holder.trim(), key:k, grams:0, pure:0, items:0, karats:{}}; list.push(map[k]); }
+    var p = map[k]; p.grams += g.grams; p.pure += pure(g); p.items++; p.karats[g.karat] = (p.karats[g.karat] || 0) + g.grams;
+  });
+  return list.sort(function(a,b){ return b.grams - a.grams; });
+}
+function renderGold(){
+  var G = data.gold, ui = goldUI;
+  var people = goldByPerson();
+  var total = G.reduce(function(s,g){ return s + g.grams; }, 0), totalPure = G.reduce(function(s,g){ return s + pure(g); }, 0);
+  if (ui.filter !== "all" && !people.some(function(p){ return p.key === ui.filter; })) ui.filter = "all";
+  var shown = G.filter(function(g){ return ui.filter === "all" || personKey(g.holder) === ui.filter; })
+    .slice().sort(function(a,b){ return personKey(a.holder) < personKey(b.holder) ? -1 : personKey(a.holder) > personKey(b.holder) ? 1 : b.grams - a.grams; });
+  var top = people[0];
+
+  var tiles = '<div class="tiles">' +
+    '<div class="tile accent"><span class="k">Total gold</span><div class="v">' + grams(total) + '</div><span class="d">' + plural(G.length, "item") + '</span></div>' +
+    '<div class="tile"><span class="k">24K equivalent</span><div class="v">' + grams(Math.round(totalPure * 1000) / 1000) + '</div><span class="d">pure gold content</span></div>' +
+    '<div class="tile"><span class="k">People holding gold</span><div class="v">' + people.length + '</div></div>' +
+    '<div class="tile"><span class="k">Most with</span><div class="v" style="font-size:20px">' + (top ? esc(top.name) : '–') + '</div>' + (top ? '<span class="d">' + grams(top.grams) + ' · ' + Math.round(top.grams / total * 100) + '% of all gold</span>' : '') + '</div>' +
+  '</div>';
+
+  var names = people.map(function(p){ return '<option value="' + esc(p.name) + '">'; }).join("");
+  var form = '<section class="card" id="gold-form"><div class="card-h"><div><h2>' + (ui.editing ? 'Edit gold item' : 'Add gold') + '</h2><p class="sub">Who has or is using each piece now. Changing the person keeps a record of who had it before.</p></div></div>' +
+    '<div class="fields">' +
+      '<label for="g-item">Item<input id="g-item" type="text" maxlength="60" placeholder="e.g. Chain, Bangle, Coin" value="' + esc(ui.item) + '"></label>' +
+      '<label for="g-grams">Weight (grams)<input id="g-grams" type="number" min="0" step="any" inputmode="decimal" value="' + esc(ui.grams) + '"></label>' +
+      '<label for="g-karat">Purity<select id="g-karat">' + KARATS.map(function(k){ return '<option' + (k === ui.karat ? ' selected' : '') + '>' + k + '</option>'; }).join("") + '</select></label>' +
+      '<label for="g-holder">With (person)<input id="g-holder" type="text" maxlength="40" list="g-people" placeholder="e.g. Me, Mother" value="' + esc(ui.holder) + '"><datalist id="g-people">' + names + '</datalist></label>' +
+      '<label for="g-since">Since<input id="g-since" type="date" max="' + TODAY + '" value="' + esc(ui.since) + '"></label>' +
+      '<label for="g-note">Note <span class="opt">optional</span><input id="g-note" type="text" maxlength="80" value="' + esc(ui.note) + '"></label>' +
+    '</div>' +
+    '<p class="err" id="g-err" style="margin-top:10px"></p>' +
+    '<div class="btns" style="margin-top:12px"><button class="primary" data-act="gold-save">' + (ui.editing ? 'Save changes' : 'Add gold') + '</button>' + (ui.editing ? '<button data-act="gold-cancel">Cancel</button>' : '') + '</div></section>';
+
+  var filterOpts = '<option value="all">Everyone</option>' + people.map(function(p){ return '<option value="' + esc(p.key) + '"' + (p.key === ui.filter ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join("");
+  var rows = shown.map(function(g){
+    var hist = (g.history || []).length ? '<small>Before: ' + g.history.slice().reverse().map(function(h){ return esc(h.holder) + (h.from ? ' (' + fmtDate(h.from) + ' – ' + fmtDate(h.to) + ')' : ''); }).join(", ") + '</small>' : '';
+    var act = ui.delAsk === g.id
+      ? '<span class="btns" style="justify-content:flex-end"><button class="sm danger solid" data-act="gold-del-yes" data-id="' + g.id + '">Delete</button><button class="sm" data-act="gold-del-no">Keep</button></span>'
+      : '<span class="btns" style="justify-content:flex-end;flex-wrap:nowrap"><button class="sm" data-act="gold-edit" data-id="' + g.id + '">Edit</button><button class="icon" data-act="gold-del" data-id="' + g.id + '" aria-label="Delete ' + esc(g.item) + '">×</button></span>';
+    return '<tr><td class="l desc"><strong>' + esc(g.item) + '</strong>' + (g.note ? '<small>' + esc(g.note) + '</small>' : '') + '</td>' +
+      '<td class="l">' + esc(g.karat) + '</td><td>' + grams(g.grams) + '</td>' +
+      '<td class="l desc">' + esc(g.holder) + hist + '</td><td class="l">' + (g.since ? fmtDate(g.since) : '–') + '</td><td>' + act + '</td></tr>';
+  }).join("");
+  var shownGrams = shown.reduce(function(s,g){ return s + g.grams; }, 0);
+  var list = '<section class="card"><div class="card-h"><h2>Gold schedule</h2>' + (G.length ? '<button class="sm" data-act="gold-csv">Copy CSV</button>' : '') + '</div>' +
+    (G.length ?
+      '<div class="ledger-bar" style="margin-bottom:14px"><label for="g-filter">Show<select id="g-filter">' + filterOpts + '</select></label></div>' +
+      '<div class="tablebox"><table><thead><tr><th class="l">Item</th><th class="l">Purity</th><th>Grams</th><th class="l">With</th><th class="l">Since</th><th></th></tr></thead><tbody>' + rows +
+      '</tbody><tfoot><tr><td class="l desc"><strong>Total' + (ui.filter === "all" ? '' : ' (' + esc(shown[0] ? shown[0].holder : '') + ')') + '</strong></td><td></td><td><strong>' + grams(shownGrams) + '</strong></td><td colspan="3"></td></tr></tfoot></table></div>'
+      : '<p class="muted">No gold added yet. Add your first item above.</p>') +
+    '</section>';
+
+  var insights = '';
+  if (people.length){
+    insights = '<section class="card"><div class="card-h"><div><h2>Insights · gold with each person</h2><p class="sub">How many grams are with each person right now.</p></div></div>' +
+      '<div class="gold-people">' + people.map(function(p){
+        var pct = total > 0 ? p.grams / total * 100 : 0;
+        var mix = KARATS.filter(function(k){ return p.karats[k]; }).map(function(k){ return k + ' ' + grams(p.karats[k]); }).join(' · ');
+        return '<div class="gp"><div class="gp-top"><div><div class="gp-name">' + esc(p.name) + '</div><div class="lc-meta">' + plural(p.items, "item") + ' · ' + mix + '</div></div>' +
+          '<div class="gp-g">' + grams(p.grams) + '<small>' + grams(Math.round(p.pure * 1000) / 1000) + ' as 24K</small></div></div>' +
+          '<div class="bar gold" role="img" aria-label="' + Math.round(pct) + '% of all gold"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+          '<div class="barlbl"><span>' + pct.toFixed(1) + '% of all gold</span></div></div>';
+      }).join("") + '</div></section>';
+  }
+
+  app.innerHTML = '<div class="stack">' +
+    '<div class="pagehead"><div><h1>Gold</h1><p class="sub">Every piece of gold, how many grams it weighs, and who has it now.</p></div></div>' +
+    tiles + form + list + insights + '</div>';
+}
+function goldCSV(){
+  var q = function(t){ return '"' + String(t == null ? "" : t).replace(/"/g,'""') + '"'; };
+  var ls = [["Item","Purity","Grams","With","Since","Note","Earlier holders"].join(",")];
+  data.gold.forEach(function(g){ ls.push([q(g.item), g.karat, g.grams, q(g.holder), g.since || "", q(g.note), q((g.history || []).map(function(h){ return h.holder; }).join("; "))].join(",")); });
+  ls.push(""); ls.push(["Person","Items","Grams","24K equivalent"].join(","));
+  goldByPerson().forEach(function(p){ ls.push([q(p.name), p.items, Math.round(p.grams * 1000) / 1000, Math.round(p.pure * 1000) / 1000].join(",")); });
+  return ls.join("\n");
+}
+function readGoldForm(){
+  var ui = goldUI;
+  ui.item = val("g-item"); ui.grams = val("g-grams"); ui.karat = val("g-karat"); ui.holder = val("g-holder"); ui.since = val("g-since"); ui.note = val("g-note");
+}
+function goldClick(act, b){
+  var ui = goldUI;
+  if (act === "gold-save"){
+    readGoldForm();
+    var g = Number(ui.grams), err = document.getElementById("g-err");
+    var msg = !ui.item ? "Give the item a name." : !(g > 0) ? "Enter the weight in grams, above 0." : !ui.holder ? "Enter who has this gold now."
+      : (ui.since && ui.since > TODAY) ? "The date can't be in the future." : "";
+    if (msg){ err.textContent = msg; return; }
+    /* reuse the existing spelling of a person ("me" -> "Me") so names stay consistent */
+    var same = data.gold.find(function(x){ return x.id !== ui.editing && personKey(x.holder) === personKey(ui.holder); });
+    if (same) ui.holder = same.holder.trim();
+    var rec = {item:ui.item, grams:Math.round(g * 1000) / 1000, karat:ui.karat, holder:ui.holder, since:ui.since || TODAY, note:ui.note};
+    if (ui.editing){
+      var cur = data.gold.find(function(x){ return x.id === ui.editing; });
+      if (cur){
+        if (personKey(cur.holder) !== personKey(rec.holder)) (cur.history = cur.history || []).push({holder:cur.holder, from:cur.since || "", to:rec.since});
+        Object.assign(cur, rec);
+      }
+      toast("Gold item updated");
+    } else {
+      rec.id = uid(); rec.history = []; data.gold.push(rec);
+      toast(grams(rec.grams) + " added with " + rec.holder);
+    }
+    var keepFilter = ui.filter; goldUI = blankGold(); goldUI.filter = keepFilter;
+    save(); renderGold();
+  }
+  else if (act === "gold-cancel"){ var f = ui.filter; goldUI = blankGold(); goldUI.filter = f; renderGold(); }
+  else if (act === "gold-edit"){
+    var x = data.gold.find(function(y){ return y.id === b.dataset.id; }); if (!x) return;
+    Object.assign(goldUI, {editing:x.id, item:x.item, grams:String(x.grams), karat:x.karat, holder:x.holder, since:x.since || TODAY, note:x.note || "", delAsk:null});
+    renderGold(); document.getElementById("gold-form").scrollIntoView({behavior:"smooth", block:"start"}); document.getElementById("g-item").focus({preventScroll:true});
+  }
+  else if (act === "gold-del"){ readGoldForm(); ui.delAsk = b.dataset.id; var y0 = window.scrollY; renderGold(); window.scrollTo(0, y0); }
+  else if (act === "gold-del-no"){ readGoldForm(); ui.delAsk = null; var y1 = window.scrollY; renderGold(); window.scrollTo(0, y1); }
+  else if (act === "gold-del-yes"){
+    readGoldForm();
+    data.gold = data.gold.filter(function(z){ return z.id !== b.dataset.id; });
+    if (ui.editing === b.dataset.id){ var f2 = ui.filter; goldUI = blankGold(); goldUI.filter = f2; }
+    goldUI.delAsk = null; save(); var y2 = window.scrollY; renderGold(); window.scrollTo(0, y2); toast("Gold item deleted");
+  }
+  else if (act === "gold-csv"){ copyText(goldCSV(), "Gold schedule"); }
+}
+
 /* ---------- events ---------- */
 function rerenderLoan(l){ var y = window.scrollY; save(); renderLoan(l); window.scrollTo(0, y); }
 app.addEventListener("input", function(e){
@@ -678,10 +819,12 @@ app.addEventListener("change", function(e){
   if (id === "pay-date") updatePay();
   if (id === "lg-loan"){ ledgerView.loan = e.target.value; renderLedger(); }
   if (id === "lg-month"){ ledgerView.monthEnds = e.target.checked; renderLedger(); }
+  if (id === "g-filter"){ readGoldForm(); goldUI.filter = e.target.value; renderGold(); }
 });
 app.addEventListener("click", function(e){
   var b = e.target.closest("[data-act]"); if (!b) return;
   var act = b.dataset.act, l = loanCtx && loanCtx.loan, s = loanCtx && loanCtx.s;
+  if (act.indexOf("gold-") === 0){ goldClick(act, b); return; }
   if (act === "fill"){ document.getElementById("pay-amt").value = b.dataset.v; updatePay(); }
   else if (act === "record"){
     var amt = nval("pay-amt"), date = val("pay-date") || TODAY;
@@ -746,12 +889,13 @@ app.addEventListener("click", function(e){
       var d2 = JSON.parse(val("restore-text"));
       if (!d2 || !Array.isArray(d2.loans)) throw new Error("bad");
       d2.loans.forEach(function(x){ if (!x.id || !(x.principal > 0) || !x.start || !Array.isArray(x.payments)) throw new Error("bad"); });
+      if (!Array.isArray(d2.gold)) d2.gold = [];
       data = d2; save(); renderDash(); toast("Backup restored");
     } catch(ex){ errEl.textContent = "That text isn't a backup from this app. Copy it again with Copy backup and paste the whole thing."; }
   }
   else if (act === "reset-example"){ document.getElementById("reset-confirm").hidden = false; }
   else if (act === "reset-no"){ document.getElementById("reset-confirm").hidden = true; }
-  else if (act === "reset-yes"){ data = {v:3, loans:[exampleLoan()]}; save(); renderDash(); toast("Example data restored"); }
+  else if (act === "reset-yes"){ data = {v:3, loans:[exampleLoan()], gold:data.gold || []}; save(); renderDash(); toast("Example data restored"); }
 });
 
 var curSel = document.getElementById("cur-select");
